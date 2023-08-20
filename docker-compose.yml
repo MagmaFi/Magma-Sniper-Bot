@@ -1,0 +1,10 @@
+version: '3'
+
+services:
+  discord-twitter-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nodejs
+    container_name: discord-twitter-bot
+    restart: unless-stopped
