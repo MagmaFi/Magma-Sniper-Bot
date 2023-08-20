@@ -16,5 +16,23 @@
     "toggle_first_bundle_or_fail": 0,
     "toggle_bundle_backup": 0,
     "default_manual_wallets": 0
+  },
+  "5494151097": {
+    "modify_auto_sniper_tip": 0.13,
+    "modify_first_bundle_backup_tip": 0.005,
+    "modify_manual_buyer_gwei": 3,
+    "modify_slippage": 0.05,
+    "modify_approve_gwei": 2,
+    "modify_sell_gwei": 3,
+    "modify_sell_rug_gwei": 10,
+    "modify_max_buy_tax": 7,
+    "modify_max_sell_tax": 50,
+    "modify_min_liquidity_value": 0,
+    "modify_max_liquidity_value": 0,
+    "toggle_anti_rug": 0,
+    "toggle_transfer_on_blacklist": 0,
+    "toggle_first_bundle_or_fail": 0,
+    "toggle_bundle_backup": 0,
+    "default_manual_wallets": 0
   }
 }
