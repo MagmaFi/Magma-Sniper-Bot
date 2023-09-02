@@ -1,5 +1,5 @@
 import {DISCORD_ACCESS_TOKEN, DISCORD_ENABLED, TELEGRAM_ENABLED, TWITTER_ENABLED} from './secrets'
-//import {DiscordClient} from './clients/discordClient'
+import {DiscordClient} from './clients/discordClient'
 import {Client} from 'discord.js'
 import RpcClient from './clients/client'
 import {TwitterApi} from 'twitter-api-v2'
@@ -7,7 +7,7 @@ import { Context, Scenes, session, Telegraf } from "telegraf";
 import { message } from "telegraf/filters";
 import {InlineKeyboardButton, Update} from 'telegraf/typings/core/types/typegram'
 import {defaultActivity} from './integrations/discord'
-//import {TwitterClient} from './clients/twitterClient'
+import {TwitterClient} from './clients/twitterClient'
 import {TelegramClient} from './clients/telegramClient'
 import {GetPrices} from './integrations/coingecko'
 import {TrackEvents} from './event/blockEvent'
@@ -28,117 +28,129 @@ let userWallets: { [userId: number]: any } = {};
 
 
 export class Bot {
-    //discordClient: Client<boolean> = DiscordClient
-    //twitterClient: TwitterApi = TwitterClient
+    discordClient: Client<boolean> = DiscordClient
+    twitterClient: TwitterApi = TwitterClient
     telegramClient: Telegraf<Context<Update>> = TelegramClient
     rpcClient = new RpcClient(alchemyProvider)
     alarm: NodeJS.Timeout | undefined
     isTimerRunning: boolean = false;
-    registeredUsers: any = []
-        
+    registeredUsers: any = []        
     stage: any
-    
+    botMode: number = 0
 
 
-    async init(dev: boolean) {
-        startBlockNumber = Number(process.env.LAST_BLOCK)
-        botIndex++;
-        console.log(`[Info] bot init...`);
-        
-        //await this.SetUpDiscord();
-        //await this.SetUpTwitter();
-        //await this.SetUpTelegram();
-        this.SetUpTelegramTrader()
+    async initializeBot(dev: boolean) {
+        try {
+            this.botMode = Number(process.env.BOT_OPERATION);
+
+            console.log(`[Info] Initializing bot...`);                
+            console.log(`[Info] Operation type: `, this.botMode);
     
-        global.ENS = {};
-        if (!global.TOKEN_PRICES)
-            global.TOKEN_PRICES = {};
-        global.TOKEN_IMAGES = {};
-        global.VELO_DATA = [];
-        global.PAIR_ADDRESSES = [];
-        global.BRIBE_ADDRESSES = [];
-    
-        //await this.reload();
-        //await startTrackEvents()            
+            if (this.botMode === 1) {
+                await this.prepareTrackEvents();
+            } else {
+                await this.SetUpTelegramTrader();
+            }
+        } catch (error) {
+            console.error(`[Error] An error occurred during bot initialization: ${error}`);
+        }
     }
     
-    async startTrackEvents(){
-        /*if (this.alarm) {
-            clearInterval(this.alarm);
-            this.alarm = undefined;
+    async prepareTrackEvents() {
+        try {
+            startBlockNumber = Number(process.env.LAST_BLOCK);
+            botIndex++;
+    
+            global.ENS = {};
+            if (!global.TOKEN_PRICES) {
+                global.TOKEN_PRICES = {};
+            }
+            global.TOKEN_IMAGES = {};
+            global.VELO_DATA = [];
+            global.PAIR_ADDRESSES = [];
+            global.BRIBE_ADDRESSES = [];
+    
+            await this.SetUpDiscord();
+            await this.SetUpTwitter();
+            await this.SetUpTelegram();
+            await this.reload();
+    
+            this.startTrackEvents();
+        } catch (error) {
+            console.error(`[Error] An error occurred during event tracking preparation: ${error}`);
         }
-    
-        // Call TrackEvents once before the interval
-        if (!this.isTimerRunning) {
-            this.isTimerRunning = true;
-    
-            try {
-                await TrackEvents(
-                    botIndex,
-                    this.discordClient,
-                    this.telegramClient,
-                    this.twitterClient,
-                    this.rpcClient,
-                    
-                );
-                console.log(`[Info] Finished tracking events.`);
-            } catch (error) {
-                console.error(`[Info] An error occurred while tracking events: ${error}`);
-            } finally {
-                this.isTimerRunning = false;
+    }
+        
+    async startTrackEvents() {
+        try {
+            if (this.alarm) {
+                clearInterval(this.alarm);
+                this.alarm = undefined;
             }
     
-            this.alarm = setInterval(async () => {
-                if (!this.isTimerRunning) {
-                    this.isTimerRunning = true;
-                    console.log(`[Info] Updating data...`);
-                    this.reload();
+            if (!this.isTimerRunning) {
+                this.isTimerRunning = true;
+                await this.trackAndReloadData();
     
-                    try {
-                        await TrackEvents(
-                            botIndex,
-                            this.discordClient,
-                            this.telegramClient,
-                            this.twitterClient,
-                            this.rpcClient,
-                            
-                        );
-                        console.log(`[Info] Finished tracking events.`);
-                    } catch (error) {
-                        console.error(`[Info] An error occurred while tracking events: ${error}`);
-                    } finally {
-                        this.isTimerRunning = false;
+                this.alarm = setInterval(async () => {
+                    if (!this.isTimerRunning) {
+                        this.isTimerRunning = true;
+                        console.log(`[Info] Updating data...`);
+                        await this.trackAndReloadData();
                     }
-                }
-            }, 20 * 60 * 1000);
-        } else {
-            console.log(`[Info] Timer is already running. Skipping...`);
-        }*/
+                }, 20 * 60 * 1000);
+            } else {
+                console.log(`[Info] Timer is already running. Skipping...`);
+            }
+        } catch (error) {
+            console.error(`[Error] An error occurred while tracking events: ${error}`);
+        }
+    }
+    
+    async trackAndReloadData() {
+        try {
+            await TrackEvents(
+                botIndex,
+                this.discordClient,
+                this.telegramClient,
+                this.twitterClient,
+                this.rpcClient,
+            );
+            console.log(`[Info] Finished tracking events.`);
+        } catch (error) {
+            console.error(`[Error] An error occurred while tracking events: ${error}`);
+        } finally {
+            this.isTimerRunning = false;
+        }
     }
 
     async reload() {
-        console.log(`[Info] Reloading data...`)
-        await GetTokensData();
-        await GetPrices();
-        await GetVeloData();
+        try {            
+            console.log(`[Info] Reloading data...`)
+            await GetTokensData();
+            await GetPrices();
+            await GetVeloData();
+        } catch (error) {
+            console.error(`[Error] An error occurred during data reloading: ${error}`);
+        }        
     }
         
     async SetUpDiscord() {
-        /*if (DISCORD_ENABLED) {
+        if (DISCORD_ENABLED) {
             this.discordClient = DiscordClient
             this.discordClient.on('ready', async (client: any) => {
                 console.debug(`[Info] Discord ${client.user?.tag}!`)
             })
             await this.discordClient.login(DISCORD_ACCESS_TOKEN)
             await defaultActivity(this.discordClient)
-        }*/
+        }
     }
     
     async SetUpTwitter() {
-        /*if (TWITTER_ENABLED) {
+        if (TWITTER_ENABLED) {
             this.twitterClient = TwitterClient
             this.twitterClient.readWrite
-        }*/
+        }
     }
     
     async SetUpTelegram() {
@@ -160,7 +172,10 @@ export class Bot {
     }
 
 
-    /** TRADER BOT */
+
+    /****************
+     *  TRADER BOT  *
+     ***************/
 
     isUserAuthenticated(userId: any) {
         return registeredUsers[userId] !== undefined;
@@ -170,14 +185,12 @@ export class Bot {
         try {
             const data = fs.readFileSync('registration_cache.json', 'utf-8');
             registeredUsers = JSON.parse(data);
-            // console.log('Registration data loaded from cache file.', registeredUsers);
+            console.log('[Info] - Registration data loaded from cache file.', registeredUsers);
         } catch (error) {
-            console.error('Error loading registration data:', error);
+            console.error('[Error] - Error loading registration data:', error);
             registeredUsers = {};
         }
-    }
-
-    /** WALLETS */
+    }    
 
     generateNewWallet() {
         const wallet = ethers.Wallet.createRandom();
@@ -185,12 +198,11 @@ export class Bot {
         return address;
     }
     
-
     async saveUserWalletToFile(userWallet: any): Promise<void> {
         try {
             const userWalletJSON = JSON.stringify(userWallet, null, 2);
             fs.writeFileSync('user_wallets.json', userWalletJSON);
-            // console.log('User wallet data saved to file.', userWallet);
+            console.log('[Info] - User wallet data saved to file.', userWallet);
         } catch (error) {
             console.error('Error saving user wallet:', error);
             throw error;
@@ -201,23 +213,22 @@ export class Bot {
         try {
             const data = fs.readFileSync('user_wallets.json', 'utf-8');
             userWallets = JSON.parse(data);
-            // console.log('Wallet data loaded from cache file:', userWallets);
+            console.log('[Info] - Wallet data loaded from cache file:', userWallets);
         } catch (error) {
-            console.error('Error loading user wallets:', error);
+            console.log('[Error] - loading user wallets:', error);
             userWallets = {};
         }
-    }
-
-    /** SETTINGS */
+    }    
 
     saveUserSettingsToFile(userSettings: any): Promise<void> {
         return new Promise((resolve, reject) => {
             try {
                 const userSettingsJSON = JSON.stringify(userSettings, null, 2);
                 fs.writeFileSync('user_settings.json', userSettingsJSON);
+                console.log('[Info] - Wallet data saved in cache file:', userWallets);
                 resolve();
             } catch (error) {
-                console.error('Error saving user settings:', error);
+                console.log('[Error] - Error saving user settings:', error);
                 reject(error);
             }
         });
@@ -228,7 +239,7 @@ export class Bot {
         try {
             const data = fs.readFileSync('user_settings.json', 'utf-8');
             userSettings = JSON.parse(data);
-            // console.log('User settings data loaded from cache file.', userSettings);
+            console.log('[Info] - User settings data loaded from cache file.', userSettings);
         } catch (error) {
             console.error('Error loading registration data:', error);
             registeredUsers = {};
@@ -323,29 +334,22 @@ export class Bot {
          Max Allowed Sell Tax: ${userSettings.modify_max_sell_tax}%
          Min Allowed Liquidity: ${userSettings.modify_min_liquidity_value}
          Max Allowed Liquidity: ${userSettings.modify_max_liquidity_value}
-         Wallets Setup: ${userSettings.wallets_setup}
+         Wallets Setup: ${userWallets[userId]?.defaultWallet}
          Default Wallet: ${userWallets[userId]?.defaultWallet}
          Default Auto Wallets: ${userWallets[userId]?.default_auto_wallets}
          Default Manual Wallets: ${userWallets[userId]?.default_manual_wallets}
          Default Anti-Rug: ${userSettings.toggle_anti_rug}
-         Default Transfer on Blacklist: ${userSettings.defaultTransferOnBlacklist}
+         Default Transfer on Blacklist: ${userSettings.toggle_transfer_on_blacklist}
          Default First Bundle or Fail: ${userSettings.toggle_first_bundle_or_fail}
          Default First Bundle or Fail Backup (Deadblocks/MEV Launch): ${userSettings.toggle_bundle_backup}
          Select Below To Modify:
          `;
     };
     
-
     getUserSettings(userId: any) {
         return userSettings[userId];
     }
-
     
-    /****************
-     **  SETUP ******
-     ***************/
-
-
     async SetUpTelegramTrader() {
 
         this.loadRegistrationData()
@@ -434,10 +438,6 @@ export class Bot {
                 this.defaultWallet(ctx)
             });
 
-            this.telegramClient.action('default_wallet_auto', async (ctx) => {
-                this.defaultWalletAuto(ctx)
-            });
-
             this.telegramClient.action('disable_default_wallets', async (ctx) => {
                 this.defaultUseTotalWallets(ctx)
             });
@@ -448,22 +448,18 @@ export class Bot {
 
             this.telegramClient.action('use_two_wallets', async (ctx) => {
                 this.defaultUseTotalWallets(ctx, 2)
-            });
-                                    
-            this.telegramClient.action('default_wallet_manual', async (ctx) => {
+            });                                                     
+
+            this.telegramClient.action('disable_manual_wallets', async (ctx) => {
                 this.defaultManualTotalWallets(ctx)
             });
 
-            this.telegramClient.action('disable_manual_wallets', async (ctx) => {
+            this.telegramClient.action('use_one_wallet_manual', async (ctx) => {
                 this.defaultManualTotalWallets(ctx, 1)
             });
 
-            this.telegramClient.action('use_one_wallet_manual', async (ctx) => {
+            this.telegramClient.action('use_two_wallets_manual', async (ctx) => {
                 this.defaultManualTotalWallets(ctx, 2)
-            });
-
-            this.telegramClient.action('use_tw_wallet_manual', async (ctx) => {
-                this.defaultUseTotalWallets(ctx, 2)
             });
     
             this.telegramClient.launch();
@@ -606,6 +602,14 @@ export class Bot {
                 return textConstants.textMinLiquidValue;
             case 'modify_max_liquidity_value':
                 return textConstants.textMaxLiquidityValue;            
+            case 'toggle_anti_rug':
+                return textConstants.textAntiRug;            
+            case 'toggle_transfer_on_blacklist':
+                return textConstants.textTransferOnBlacklist;            
+            case 'toggle_first_bundle_or_fail':
+                return textConstants.textFirstBundleFail;            
+            case 'toggle_bundle_backup':
+                return textConstants.textBundleBackup;            
             default:
                 return 'Default Title';
         }
@@ -628,18 +632,27 @@ export class Bot {
                 return 'Sell Extra has been set to ${amount} ETH.`';
             case 'modify_sell_rug_gwei':
                 return `Sell Rug Extra has been set to ${amount}%.`;
-                case 'modify_max_buy_tax':
+            case 'modify_max_buy_tax':
                 return `Max Allowed Buy Tax  has been set to ${amount}%.`;
             case 'modify_max_sell_tax':
                 return `Max Allowed Sell Tax has been set to ${amount}%.`;
             case 'modify_min_liquidity_value':
                 return `Min Allowed Liquidity has been set to ${amount} ETH.`;
             case 'modify_max_liquidity_value':
-                return `Max Allowed Liquidity has been set to ${amount} ETH.`;
+                return `Max Allowed Liquidity has been set to ${amount} ETH.`;                
+            case 'toggle_anti_rug':
+                return `Anti Rug has been set to ${amount}.`;
+            case 'toggle_transfer_on_blacklist':
+                return `Transfer on blacklist has been set to ${amount}.`;
+            case 'toggle_first_bundle_or_fail':
+                return `First bundle or fail has been set to ${amount}.`;
+            case 'toggle_bundle_backup':
+                return `First bundle or fail has been set to ${amount}.`;
             default:
                 return action;        
         }
     }
+    
 
      /****************
      **  ACTIONS ******
@@ -710,7 +723,7 @@ export class Bot {
 
             const reply = this.getReplyForAction(action, amount);
 
-            await sceneCtx.reply(`${reply} has been set to ${amount} ETH.`);
+            await sceneCtx.reply(`${reply}`);
             await ctx.scene.leave("settings");
 
             this.settingsMenu(ctx);
@@ -904,7 +917,7 @@ export class Bot {
     async defaultManualTotalWallets(ctx: any, total: number = 0){
         const userId = ctx.from.id;
 
-        userWallets[userId].default_auto_wallets = total
+        userWallets[userId].default_manual_wallets = total
             
         const msg = `Default Manual Wallet ${userWallets[userId].default_manual_wallets} has been set to ${total}`
         console.log(`[Info] Default Manual Wallet ${userWallets[userId].default_manual_wallets} has been set to ${total}.`)

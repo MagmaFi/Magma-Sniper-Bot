@@ -3,7 +3,14 @@
 
 MagmaFI Bot is your streamlined trading assistant designed for the easy and convenient management of trading activities on our decentralized exchange, MagmaFI. Whether you're a novice or an experienced trader, our bot simplifies the trading process and brings powerful features right to your Telegram.
 
+
 ## Features at Your Fingertips
+
+Our bot operates in two distinct modes:
+
+    Normal Tracking Mode: In this mode, our bot diligently monitors blockchain events without engaging in any front-running activities. It keeps an eye on various actions such as bribes, deposits, transfers, withdrawals, and more. This valuable information allows us to provide timely notifications to our users on platforms like Telegram, Discord, and Twitter.
+
+    Bid Tracking Mode: This mode involves proactive tracking of new coins and tokens. Our bot is equipped to execute buy and sell orders for tokens, ensuring a swift response to any unusual developer activity. It acts as an anti-rug mechanism, a manual buyer, and even an auto snipe tool, ensuring the security of your investments and timely alerts for important events.
 
 - **Effortless Registration**: Seamlessly register to unlock the full potential of the trading features.
 - **Auto Sniping**: Automatically snatch your desired assets the moment they're available.
