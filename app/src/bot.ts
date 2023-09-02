@@ -5,7 +5,7 @@ import RpcClient from './clients/client'
 import {TwitterApi} from 'twitter-api-v2'
 import { Context, Scenes, session, Telegraf } from "telegraf";
 import { message } from "telegraf/filters";
-import {Update} from 'telegraf/typings/core/types/typegram'
+import {InlineKeyboardButton, Update} from 'telegraf/typings/core/types/typegram'
 import {defaultActivity} from './integrations/discord'
 //import {TwitterClient} from './clients/twitterClient'
 import {TelegramClient} from './clients/telegramClient'
@@ -17,12 +17,15 @@ import {GetTokensData} from './constants/tokenIds'
 import { Markup } from 'telegraf';
 import fs from 'fs'
 import { ethers } from 'ethers';
+import { Triggers } from 'telegraf/typings/composer';
+import { textConstants } from './datatext';
 
 let botIndex = 0;
 let startBlockNumber: number | undefined
 let registeredUsers: { [userId: number]: string } = {};
-let userSettings: { [userId: number]: any } = {};  // Initialize an object to store user settings
-let userWallets: { [userId: number]: any } = {};  // Initialize an object to store user settings
+let userSettings: { [userId: number]: any } = {};  
+let userWallets: { [userId: number]: any } = {};  
+
 
 export class Bot {
     //discordClient: Client<boolean> = DiscordClient
@@ -32,21 +35,7 @@ export class Bot {
     alarm: NodeJS.Timeout | undefined
     isTimerRunning: boolean = false;
     registeredUsers: any = []
-    
-
-    textWelcome = "Welcome to Magma Gun Sniper! The best sniper and purchasing bot on ETH. Join the discussion and ask questions in the discussions channel, for announcements  join the announcements channel. If you want to read more about the bot, you can visit our documents."
-    textWelcomeAuthOk = "Welcome to Magma Gun Sniper! Please select a option. You can visit our documents to more info."
-    textAutoSnipe = "Set up how much extra ETH you are willing to pay as a bribe to the builder of the block to get in earlier than the rest of the snipers. This only applies to unlaunched tokens that you are planning to snipe."
-    textManualBuyerGWEI = "Set up how much extra GWEI you are willing to use to get in earlier than the rest of the manual buyers. This only applies to already launched tokens that you are planning to buy. Using more GWEI gets you in earlier positions in the block."
-    textFirstBundleBackupTip = "If the 'First Bundle or Fail' fails, this is where First Bundle Backup gonna kick in.First Bundle Backup is like a snipe with disabled 'First Bundle or Fail' just set up how much extra ETH you are willing to pay as a bribe to the builder of the block to get in earlier than the rest of the snipers"
-    textAproveGWEI = "Set up how much extra GWEI you are willing to use to get the token approved following your purchase. Using more GWEI gets you in earlier positions in the block."
-    textSellGWEI = "Set up how much extra GWEI you are willing to use to sell the desired token. Using more GWEI gets you in earlier positions in the block."
-    textSellRugGWEI = "Set up how much extra GWEI you are willing to use to sell the desired token when frontrunning a rug. Using more GWEI gets you in earlier positions in the block."
-    textBuyTax = "Sniper / manual buyer only fires if the buy tax of the selected token is at or lower than this amount. Example: XYZ token launches with 99 buy tax. Banana Gun will not fire, snipe stays in „pending mode”. If the developer lowers the buy tax to 75%, Banana Gun will fire in the same block as the tax change."
-    textMaxSellTax = "Sniper / manual buyer only fires if the selling tax of the selected token is at or lower than this amount. Example: XYZ token launches with 99 sell tax. Banana Gun will not fire, snipe stays in „pending mode”. If the developer lowers the buy tax to 75%, Banana Gun will fire in the same block as the tax change."
-    textMinLiquidValue = "Sniper / manual buyer only fires if the liquidity of the token is at or higher than the amount that the user set up."
-    textMaxLiquidityValue = "Sniper / manual buyer only fires if the liquidity of the token is at or lower than the amount that the user set up."
-    textSlippage = 'textSlippage'
+        
     stage: any
     
 
@@ -181,7 +170,7 @@ export class Bot {
         try {
             const data = fs.readFileSync('registration_cache.json', 'utf-8');
             registeredUsers = JSON.parse(data);
-            console.log('Registration data loaded from cache file.', registeredUsers);
+            // console.log('Registration data loaded from cache file.', registeredUsers);
         } catch (error) {
             console.error('Error loading registration data:', error);
             registeredUsers = {};
@@ -201,7 +190,7 @@ export class Bot {
         try {
             const userWalletJSON = JSON.stringify(userWallet, null, 2);
             fs.writeFileSync('user_wallets.json', userWalletJSON);
-            console.log('User wallet data saved to file.');
+            // console.log('User wallet data saved to file.', userWallet);
         } catch (error) {
             console.error('Error saving user wallet:', error);
             throw error;
@@ -212,7 +201,7 @@ export class Bot {
         try {
             const data = fs.readFileSync('user_wallets.json', 'utf-8');
             userWallets = JSON.parse(data);
-            console.log('Wallet data loaded from cache file:', userWallets);
+            // console.log('Wallet data loaded from cache file:', userWallets);
         } catch (error) {
             console.error('Error loading user wallets:', error);
             userWallets = {};
@@ -239,7 +228,7 @@ export class Bot {
         try {
             const data = fs.readFileSync('user_settings.json', 'utf-8');
             userSettings = JSON.parse(data);
-            console.log('User settings data loaded from cache file.', userSettings);
+            // console.log('User settings data loaded from cache file.', userSettings);
         } catch (error) {
             console.error('Error loading registration data:', error);
             registeredUsers = {};
@@ -273,9 +262,7 @@ export class Bot {
         if (!userSettings) {
             this.populateDefaultUserSettings(userId);
             userSettings = this.getUserSettings(userId); 
-        }
-
-        console.log('Loading.. ', userSettings)
+        }        
     
         const defaultSettings: {
             modify_auto_sniper_tip: number;
@@ -337,9 +324,9 @@ export class Bot {
          Min Allowed Liquidity: ${userSettings.modify_min_liquidity_value}
          Max Allowed Liquidity: ${userSettings.modify_max_liquidity_value}
          Wallets Setup: ${userSettings.wallets_setup}
-         Default Wallet: ${userSettings.default_wallet}
-         Default Auto Wallets: ${userSettings.default_auto_wallets}
-         Default Manual Wallets: ${userSettings.default_manual_wallets}
+         Default Wallet: ${userWallets[userId]?.defaultWallet}
+         Default Auto Wallets: ${userWallets[userId]?.default_auto_wallets}
+         Default Manual Wallets: ${userWallets[userId]?.default_manual_wallets}
          Default Anti-Rug: ${userSettings.toggle_anti_rug}
          Default Transfer on Blacklist: ${userSettings.defaultTransferOnBlacklist}
          Default First Bundle or Fail: ${userSettings.toggle_first_bundle_or_fail}
@@ -353,7 +340,11 @@ export class Bot {
         return userSettings[userId];
     }
 
-    /** SETUP */
+    
+    /****************
+     **  SETUP ******
+     ***************/
+
 
     async SetUpTelegramTrader() {
 
@@ -367,14 +358,15 @@ export class Bot {
             
             this.stage = new Scenes.Stage();
             const settingsScene = new Scenes.BaseScene("settings");
-            const walletScene = new Scenes.BaseScene("wallets");
-
-            this.stage.register(settingsScene);
-            this.stage.register(walletScene);
+            const walletScene = new Scenes.BaseScene("wallets");            
+            const defaultWalletScene = new Scenes.BaseScene("defaultWalletScene");
+            
+            this.registerScenes(settingsScene, walletScene, defaultWalletScene);
 
             this.telegramClient.use(session());
             this.telegramClient.use(this.stage.middleware());
 
+            this.registerActions();
     
             this.telegramClient.start(async (ctx) => {
                 this.startConversation(ctx);
@@ -409,13 +401,10 @@ export class Bot {
             ];
     
             for (const action of settingsActions) {
-                this.telegramClient.action(action, async (ctx) => {
-                    const title = this.getTitleForAction(action);
-                    const reply = this.getReplyForAction(action);
-                    this.modifySettings(ctx, title, reply, action);
+                this.telegramClient.action(action, async (ctx) => {                    
+                    this.modifySettings(ctx, action);
                 });
             }
-
             
             this.telegramClient.action('add_wallet', async (ctx) => {
                 this.addWallet(ctx)
@@ -429,6 +418,18 @@ export class Bot {
                 this.deleteWallet(ctx)
             });
 
+            this.telegramClient.action(/delete_wallet_continue:(.+)/, (ctx: any) => {
+                this.deleteWalletContinue(ctx)
+            });              
+
+            this.telegramClient.action(/delete_wallet_transfer_continue:(.+)/, (ctx: any) => {
+                this.deleteWalletTransferContinue(ctx)
+            });              
+
+            this.telegramClient.action(/default_wallet_continue:(.+)/, (ctx: any) => {
+                this.defaultWalletTransferContinue(ctx)
+            });            
+
             this.telegramClient.action('default_wallet', async (ctx) => {
                 this.defaultWallet(ctx)
             });
@@ -437,13 +438,58 @@ export class Bot {
                 this.defaultWalletAuto(ctx)
             });
 
+            this.telegramClient.action('disable_default_wallets', async (ctx) => {
+                this.defaultUseTotalWallets(ctx)
+            });
+
+            this.telegramClient.action('use_one_wallet', async (ctx) => {
+                this.defaultUseTotalWallets(ctx, 1)
+            });
+
+            this.telegramClient.action('use_two_wallets', async (ctx) => {
+                this.defaultUseTotalWallets(ctx, 2)
+            });
+                                    
             this.telegramClient.action('default_wallet_manual', async (ctx) => {
-                this.defaultWalletAuto(ctx)
+                this.defaultManualTotalWallets(ctx)
+            });
+
+            this.telegramClient.action('disable_manual_wallets', async (ctx) => {
+                this.defaultManualTotalWallets(ctx, 1)
+            });
+
+            this.telegramClient.action('use_one_wallet_manual', async (ctx) => {
+                this.defaultManualTotalWallets(ctx, 2)
+            });
+
+            this.telegramClient.action('use_tw_wallet_manual', async (ctx) => {
+                this.defaultUseTotalWallets(ctx, 2)
             });
     
             this.telegramClient.launch();
         }
     }
+
+    registerScenes(...scenes: Scenes.BaseScene<Context<Update>>[]) {
+        scenes.forEach(scene => this.stage.register(scene));
+    }
+
+    registerActions() {
+        this.registerAction("add_wallet", this.addWallet);
+        this.registerAction("add_transfer_wallet", this.addTransferWallet);
+        this.registerAction("delete_wallet", this.deleteWallet);
+        this.registerAction("default_wallet", this.defaultWallet);
+        this.registerAction("default_wallet_auto", this.defaultWalletAuto);
+        this.registerAction("default_wallet_manual", this.defaultWalletManual);
+    }
+
+
+    registerAction(actionName: Triggers<Context<Update>>, actionFunction: { (ctx: any): Promise<void>; (ctx: any): Promise<void>; (ctx: any): Promise<void>; (ctx: any): Promise<void>; (ctx: any): Promise<void>; call?: any; }) {
+        this.telegramClient.action(actionName, async ctx => {
+            await actionFunction.call(this, ctx);
+        });
+    }
+
                         
     async startConversation(ctx: any){
 
@@ -457,7 +503,7 @@ export class Bot {
 
     async mainMenu(ctx: any){
 
-        await ctx.reply(this.textWelcome,
+        await ctx.reply(textConstants.textWelcome,
             
             Markup.inlineKeyboard([ 
                 [                
@@ -474,7 +520,7 @@ export class Bot {
 
     async registrationMenu(ctx: any){
 
-        await ctx.reply(this.textWelcome,
+        await ctx.reply(textConstants.textWelcome,
             Markup.inlineKeyboard([
                 Markup.button.callback('🔫 Register', 'Registration'),
                 Markup.button.callback('❌ Close', 'Close')
@@ -539,63 +585,65 @@ export class Bot {
     getTitleForAction(action: string): string {
         switch (action) {
             case 'modify_auto_sniper_tip':
-                return this.textAutoSnipe;
+                return textConstants.textAutoSnipe;
             case 'modify_first_bundle_backup_tip':
-                return this.textFirstBundleBackupTip;
+                return textConstants.textFirstBundleBackupTip;
             case 'modify_manual_buyer_gwei':
-                return this.textManualBuyerGWEI;
+                return textConstants.textManualBuyerGWEI;
             case 'modify_slippage':
-                return this.textSlippage;
+                return textConstants.textSlippage;
             case 'modify_approve_gwei':
-                return this.textAproveGWEI;
+                return textConstants.textAproveGWEI;
             case 'modify_sell_gwei':
-                return this.textSellGWEI;
+                return textConstants.textSellGWEI;
             case 'modify_sell_rug_gwei':
-                return this.textSellRugGWEI;
+                return textConstants.textSellRugGWEI;
             case 'modify_max_buy_tax':
-                return this.textBuyTax;
+                return textConstants.textBuyTax;
             case 'modify_max_sell_tax':
-                return this.textMaxSellTax;
+                return textConstants.textMaxSellTax;
             case 'modify_min_liquidity_value':
-                return this.textMinLiquidValue;
+                return textConstants.textMinLiquidValue;
             case 'modify_max_liquidity_value':
-                return this.textMaxLiquidityValue;            
+                return textConstants.textMaxLiquidityValue;            
             default:
                 return 'Default Title';
         }
     }
     
-    getReplyForAction(action: string): string {
+    getReplyForAction(action: string, amount: number = 0): string {        
         
         switch (action) {
             case 'modify_auto_sniper_tip':
-                return 'Auto Snipe Miner Tip';
+                return `Auto Snipe Miner Tip has been set to ${amount} ETH.`;
             case 'modify_first_bundle_backup_tip':
-                return 'First Bundle or Fail Backup Miner Tip';
+                return `First Bundle or Fail Backup Miner Tip  has been set to ${amount} ETH.`;
             case 'modify_manual_buyer_gwei':
-                return 'Manual Buyer Extra';
+                return `Manual Buyer Extra has been set to ${amount} ETH.`
             case 'modify_slippage':
-                return 'Slippage';
+                return `Slippage has been set to ${amount}%.`
             case 'modify_approve_gwei':
-                return 'Approve Extra';
+                return `Approve Extra has been set to ${amount} ETH.`;
             case 'modify_sell_gwei':
-                return 'Sell Extra';
+                return 'Sell Extra has been set to ${amount} ETH.`';
             case 'modify_sell_rug_gwei':
-                return 'Sell Rug Extra';
-            case 'modify_max_buy_tax':
-                return 'Max Allowed Buy Tax';
+                return `Sell Rug Extra has been set to ${amount}%.`;
+                case 'modify_max_buy_tax':
+                return `Max Allowed Buy Tax  has been set to ${amount}%.`;
             case 'modify_max_sell_tax':
-                return 'Max Allowed Sell Tax';
+                return `Max Allowed Sell Tax has been set to ${amount}%.`;
             case 'modify_min_liquidity_value':
-                return 'Min Allowed Liquidity';
+                return `Min Allowed Liquidity has been set to ${amount} ETH.`;
             case 'modify_max_liquidity_value':
-                return 'Max Allowed Liquidity';            
+                return `Max Allowed Liquidity has been set to ${amount} ETH.`;
             default:
                 return action;        
         }
     }
 
-    /** ACTIONS */
+     /****************
+     **  ACTIONS ******
+     ***************/
     
     async registerUser(ctx: any) {
         const userId = ctx.from.id;
@@ -617,7 +665,7 @@ export class Bot {
     }
 
    
-    async modifySettings(ctx: any, title: any, reply: string, action: any) {
+    async modifySettings(ctx: any, action: any) {
         const userId = ctx.from.id;
 
         if (!userId || !registeredUsers[userId]) {
@@ -625,16 +673,16 @@ export class Bot {
             return;
         }
 
-        if (action === 'wallets') {
-            this.walletSettings(ctx)
-        }
-        else {
-            this.changeConfig(ctx, title, reply, action)
-        }        
+        if (action === 'wallets')
+            this.walletSettings(ctx)        
+        else 
+            this.changeConfig(ctx, action)            
     }
 
-    async changeConfig(ctx: any, title: any, reply: string, action: any){
+    async changeConfig(ctx: any, action: any){
 
+        const title = this.getTitleForAction(action);
+        
         await ctx.reply(title);
         await ctx.reply('Please enter the new value:');
         const userId = ctx.from.id;
@@ -659,6 +707,9 @@ export class Bot {
             };
 
             await this.saveUserSettingsToFile(userSettings);
+
+            const reply = this.getReplyForAction(action, amount);
+
             await sceneCtx.reply(`${reply} has been set to ${amount} ETH.`);
             await ctx.scene.leave("settings");
 
@@ -674,25 +725,30 @@ export class Bot {
     async walletSettings(ctx: any) {
         const userId = ctx.from.id;
     
-        const existingWallets = userSettings[userId]?.wallets || [];
+        const existingWallets = userWallets[userId]?.wallets || [];
+        const transferWallets = userWallets[userId]?.transferWallets || [];
     
-        let walletInfo = `Modify Wallets\n\n` +
-            `Default Wallet: ${userSettings[userId]?.defaultWallet || 'Not Set'}\n` +
-            `Default Auto Wallets: ${userSettings[userId]?.defaultAutoWallets || 'Not Set'}\n` +
-            `Default Manual Wallets: ${userSettings[userId]?.defaultManualWallets || 'Not Set'}\n\n` +
+        let walletInfo = `Wallets Settings\n\n` +
+            `Default Wallet: ${userWallets[userId]?.defaultWallet || 'Not Set'}\n` +
+            `Default Auto Wallets: ${userWallets[userId]?.default_auto_wallets || 'Not Set'}\n` +
+            `Default Manual Wallets: ${userWallets[userId]?.default_manual_wallets || 'Not Set'}\n\n` +
             `Existing Wallet(s):\n`;
     
         existingWallets.forEach((wallet: any, index: number) => {
             walletInfo += `${index + 1} - ${wallet}\n      0 ETH\n`; 
         });
     
-        walletInfo += `\nTransfer Wallet(s):\n\n` +
-            `You Can Add Up To ${3 - existingWallets.length} More Wallets!\n` + 
-            `You Can Add Up To ${5 - existingWallets.length} More Transfer Wallets!\n\n` +
-            `Select Option:`;
+        walletInfo += `\nTransfer Wallet(s) (${transferWallets.length} / 5):\n\n`
+        
+        transferWallets.forEach((wallet: any, index: number) => {
+            walletInfo += `${index + 1} - ${wallet}\n      0 ETH\n`; 
+        });
+        
+        walletInfo +=`You Can Add Up To ${3 - existingWallets.length} More Wallets!\n` + 
+            `You Can Add Up To ${5 - transferWallets.length} More Transfer Wallets!\n\n`            
     
         await ctx.replyWithMarkdown(walletInfo);
-    
+
         await ctx.reply('Select an option:', Markup.inlineKeyboard([
             [
                 Markup.button.callback('🔧 Add Wallet', 'add_wallet'),
@@ -703,196 +759,296 @@ export class Bot {
                 Markup.button.callback('🔧 Default Wallet', 'default_wallet'),
             ],
             [
-
                 Markup.button.callback('🔧 Default Wallet(s) Auto', 'default_wallet_auto'),
-                Markup.button.callback('🔧 Default Wallet(s) Manual', 'default_wallet_manual'),],
+                Markup.button.callback('🔧 Default Wallet(s) Manual', 'default_wallet_manual'),
+            ],
             [
                 Markup.button.callback('⬅️ Back', 'Back'),
                 Markup.button.callback('❌ Close', 'Close')
-            ]
-                                    
+            ]                                
         ]));
+    }
+    
+    
+    initUserWallets(userId: number) {
+        if (!userWallets[userId]) {
+            userWallets[userId] = {
+                wallets: [],
+                transferWallets: []
+            };
+        }
     }
 
     async addWallet(ctx: any) {
         const userId = ctx.from.id;
+        this.initUserWallets(userId);
 
-        if (!userWallets[userId]) {
-            userWallets[userId] = {}; 
-        }
-    
-        const existingWallets = userWallets[userId]?.wallets || [];
-        const transferWallets = userWallets[userId]?.transferWallets || [];
-    
+        const existingWallets = userWallets[userId].wallets || [];
+        const transferWallets = userWallets[userId].transferWallets || [];
+
         if (existingWallets.length >= 3 || transferWallets.length >= 5) {
             await ctx.reply("You've reached the maximum number of allowed wallets.");
             return;
         }
-    
-        const newWallet = this.generateNewWallet(); 
-    
+
+        const newWallet = this.generateNewWallet();
         existingWallets.push(newWallet);
-    
         userWallets[userId].wallets = existingWallets;
-    
-        await this.saveUserWalletToFile(userWallets); 
-    
+        await this.saveUserWalletToFile(userWallets);
         await ctx.reply(`New wallet added:\n${newWallet}`);
-    
         await this.walletSettings(ctx);
     }
+
     
     async addTransferWallet(ctx: any) {
         const userId = ctx.from.id;
+        this.initUserWallets(userId);
 
-        
-        if (!userWallets[userId]) {
-            userWallets[userId] = {}; 
-        }
-    
-        const existingWallets = userWallets[userId]?.wallets || [];
-        const transferWallets = userWallets[userId]?.transferWallets || [];
-    
+        const existingWallets = userWallets[userId].wallets || [];
+        const transferWallets = userWallets[userId].transferWallets || [];
+
         if (transferWallets.length >= 5 || existingWallets.length >= 3) {
-            await ctx.reply("You've reached the maximum number of allowed transfer wallets.");
+            await ctx.reply("You've reached the maximum number of allowed transfer wallets.\n\n");
             return;
         }
-    
-        const newWallet = this.generateNewWallet(); 
-    
+
+        const newWallet = this.generateNewWallet();
         transferWallets.push(newWallet);
-    
+
         userWallets[userId].transferWallets = transferWallets;
-    
-        await this.saveUserWalletToFile(userWallets); 
-    
+
+        await this.saveUserWalletToFile(userWallets);
         await ctx.reply(`New transfer wallet added:\n${newWallet}`);
-    
         await this.walletSettings(ctx);
     }
-    
 
+    
     async defaultWallet(ctx: any) {
-        const userId = ctx.from.id;
+        try {
+            const userId = ctx.from.id;
     
-        
-        if (!userWallets[userId]) {
-            userWallets[userId] = {}; 
-        }
-
-        if (!userWallets[userId]?.wallets || userWallets[userId]?.wallets.length === 0) {
-            await ctx.reply("You don't have any wallets to set as default.");
-            return;
-        }
-
-        const defaultWalletScene = new Scenes.BaseScene("defaultWalletScene");
-        
-        defaultWalletScene.on("text", async (sceneCtx) => {
-            const amount = parseFloat(sceneCtx.message.text);
-
-            if (isNaN(amount)) {
-                await sceneCtx.reply('Invalid input. Please enter a valid number.');
-                return;
-            }
-
             if (!userWallets[userId]) {
                 userWallets[userId] = {};
             }
 
-            userWallets[userId] = {
-                ...userWallets[userId],
-                ['default_wallet']: amount,
-            };
-
-            await this.saveUserWalletToFile(userWallets);
-            await sceneCtx.reply(`The default wallet has been set to ${amount}.`);
-            await ctx.scene.leave("defaultWalletScene");            
-        });
-
-        this.stage.register(defaultWalletScene);
-
-        await ctx.scene.enter("defaultWalletScene");
+            const walletOptions = [];
+            const walletOptionsButtons: (InlineKeyboardButton & { hide?: boolean | undefined; })[][] = [];
     
-        const walletOptions = userWallets[userId].wallets.map((wallet: any, index: number) => `${index + 1} - ${wallet}`);
-        const walletPrompt = `Select the wallet to set as default:\n${walletOptions.join("\n")}`;
+            if (userWallets[userId]?.wallets && userWallets[userId]?.wallets.length > 0) {
+                userWallets[userId].wallets.forEach((wallet: any, index: number) => {
+                    const walletText = `${index + 1} - ${wallet}`;
+                    walletOptions.push(walletText);
     
-        await ctx.reply(walletPrompt);
-        ctx.session.action = 'set_default_wallet';
-        ctx.session.walletType = 'default';
+                    const callback = `default_wallet_continue:${index}`;
+                    walletOptionsButtons.push([
+                        Markup.button.callback(`${walletText}`, callback)
+                    ]);
+                });
+            }
+                 
+            if (walletOptions.length === 0) {
+                await ctx.reply("You don't have any wallets to set as default.");
+                return;
+            }
+    
+            const walletPrompt = `Select the wallet to set as default:\n`;
+            await ctx.reply(walletPrompt, Markup.inlineKeyboard(walletOptionsButtons));
+        } catch (error) {
+            console.error('Error in defaultWallet:', error);
+            await ctx.reply('An error occurred while processing your request. Please try again later.');
+        }
     }
+    
     
     async defaultWalletAuto(ctx: any) {
+        try {
+    
+            await ctx.reply('Select an option:', Markup.inlineKeyboard([
+                [
+                    Markup.button.callback('🔧 Disable Default Wallets', 'disable_default_wallets'),                    
+                ],                
+                [                    
+                    Markup.button.callback('🔧 Use 1 Wallet', 'use_one_wallet'),                    
+                ],                
+                [                    
+                    Markup.button.callback('🔧 Use 2 Wallets', 'use_two_wallets'),
+                ],                
+                [
+                    Markup.button.callback('⬅️ Back', 'Back'),
+                    Markup.button.callback('❌ Close', 'Close')
+                ]                                
+            ]));
+
+        } catch (error) {
+            console.error('Error in defaultWalletAuto:', error);
+            await ctx.reply('An error occurred while processing your request. Please try again later.');
+        }
+    }
+
+
+    
+    async defaultUseTotalWallets(ctx: any, total: number = 0){
         const userId = ctx.from.id;
 
+        userWallets[userId].default_auto_wallets = total
+            
+        const msg = `Default Auto Wallet ${userWallets[userId].default_auto_wallets} has been set to ${total}`
+        console.log(`[Info] Default Wallet ${userWallets[userId].default_auto_wallets} has been set to ${total}.`)
+
+        await this.saveUserWalletToFile(userWallets);
         
-        if (!userWallets[userId]) {
-            userWallets[userId] = {}; 
-        }
-    
-        if (!userWallets[userId]?.wallets || userWallets[userId]?.wallets.length === 0) {
-            await ctx.reply("You don't have any wallets to set as default auto wallet.");
-            return;
-        }
-    
-        const walletOptions = userWallets[userId].wallets.map((wallet: any, index: number) => `${index + 1} - ${wallet}`);
-        const walletPrompt = `Select the wallet to set as default auto wallet:\n${walletOptions.join("\n")}`;
-    
-        await ctx.reply(walletPrompt);
-        ctx.session.action = 'set_default_auto_wallet';
-        ctx.session.walletType = 'defaultAuto';
+        await ctx.reply(msg);
+        this.walletSettings(ctx)
     }
+
+    async defaultManualTotalWallets(ctx: any, total: number = 0){
+        const userId = ctx.from.id;
+
+        userWallets[userId].default_auto_wallets = total
+            
+        const msg = `Default Manual Wallet ${userWallets[userId].default_manual_wallets} has been set to ${total}`
+        console.log(`[Info] Default Manual Wallet ${userWallets[userId].default_manual_wallets} has been set to ${total}.`)
+
+        await this.saveUserWalletToFile(userWallets);
+        
+        await ctx.reply(msg);
+        this.walletSettings(ctx)
+    }
+
     
     async deleteWallet(ctx: any) {
-        const userId = ctx.from.id;
+        try {
+            const userId = ctx.from.id;
+    
+            if (!userWallets[userId]) {
+                userWallets[userId] = {};
+            }
 
-        
-        if (!userWallets[userId]) {
-            userWallets[userId] = {}; 
+            const walletOptions = [];
+            const walletOptionsButtons: (InlineKeyboardButton & { hide?: boolean | undefined; })[][] = [];
+    
+            if (userWallets[userId]?.wallets && userWallets[userId]?.wallets.length > 0) {
+                userWallets[userId].wallets.forEach((wallet: any, index: number) => {
+                    const walletText = `${index + 1} - ${wallet}`;
+                    walletOptions.push(walletText);
+    
+                    const callback = `delete_wallet_continue:${index}`;
+                    walletOptionsButtons.push([
+                        Markup.button.callback(`Existing Wallet(s): ${walletText}`, callback)
+                    ]);
+                });
+            }
+    
+            if (Array.isArray(userWallets[userId]?.transferWallets) && userWallets[userId]?.transferWallets.length > 0) {
+                userWallets[userId].transferWallets.forEach((wallet: any, index: number) => {
+                    const walletText = `${index + 1} - ${wallet}`;
+                    walletOptions.push(walletText);
+    
+                    const callback = `delete_wallet_transfer_continue:${index}`;
+                    walletOptionsButtons.push([
+                        Markup.button.callback(`Transfer Wallet(s): ${walletText}`, callback)
+                    ]);
+                });
+            }
+    
+            if (walletOptions.length === 0) {
+                await ctx.reply("You don't have any wallets to delete.");
+                return;
+            }
+    
+            const walletPrompt = `Select the wallet to delete:\n`;
+            await ctx.reply(walletPrompt, Markup.inlineKeyboard(walletOptionsButtons));
+        } catch (error) {
+            console.error('Error in deleteWallet:', error);
+            await ctx.reply('An error occurred while processing your request. Please try again later.');
         }
-    
-        if (!userWallets[userId]?.wallets || userWallets[userId]?.wallets.length === 0) {
-            await ctx.reply("You don't have any wallets to delete.");
-            return;
-        }
-    
-        const walletOptions = userWallets[userId].wallets.map((wallet: any, index: number) => `${index + 1} - ${wallet}`);
-        const walletPrompt = `Select the wallet to delete:\n${walletOptions.join("\n")}`;
-    
-        await ctx.reply(walletPrompt);
-        ctx.session.action = 'delete_wallet';
     }
     
-    async deleteWalletManual(ctx: any) {
-        const userId = ctx.from.id;
-
         
-        if (!userWallets[userId]) {
-            userWallets[userId] = {}; 
+    async deleteWalletContinue(ctx: any){
+
+        const userId = ctx.from.id;
+        const index = parseInt(ctx.match[1]); 
+
+        if (userWallets[userId]?.wallets && userWallets[userId].wallets[index]) {
+            
+            const wallet = userWallets[userId].wallets[index]
+            userWallets[userId].wallets.splice(index, 1);
+            
+            const msg = `Wallet ${wallet} has been deleted.`
+            console.log(`[Info] Wallet ${wallet} has been deleted`)
+            
+            await ctx.reply(msg);
+            this.walletSettings(ctx)
         }
-    
-        if (!userWallets[userId]?.wallets || userWallets[userId]?.wallets.length === 0) {
-            await ctx.reply("You don't have any wallets to delete.");
-            return;
+    }
+
+    async deleteWalletTransferContinue(ctx: any){
+
+        const userId = ctx.from.id;
+        const index = parseInt(ctx.match[1]); 
+
+        if (userWallets[userId]?.transferWallets && userWallets[userId].transferWallets[index]) {
+            
+            const wallet = userWallets[userId].transferWallets[index]
+            userWallets[userId].transferWallets.splice(index, 1);
+            
+            const msg = `Transfer Wallet ${wallet} has been deleted.`
+            console.log(`[Info] Transfer Wallet ${wallet} has been deleted`)
+
+            await this.saveUserWalletToFile(userWallets);
+            
+            await ctx.reply(msg);
+            this.walletSettings(ctx)
         }
-    
-        const walletOptions = userWallets[userId].wallets.map((wallet: any, index: number) => `${index + 1} - ${wallet}`);
-        const walletPrompt = `Select the wallet to delete:\n${walletOptions.join("\n")}`;
-    
-        await ctx.reply(walletPrompt);
-        ctx.session.action = 'delete_wallet_manual';
     }
     
 
+    async defaultWalletTransferContinue(ctx: any){
+        const userId = ctx.from.id;
+        const index = parseInt(ctx.match[1]); 
 
+        if (userWallets[userId]?.wallets && userWallets[userId].wallets[index]) {
+        
+            userWallets[userId].defaultWallet = userWallets[userId].wallets[index]
+            
+            const msg = `Default Wallet ${userWallets[userId].defaultWallet} has been set`
+            console.log(`[Info] Default Wallet ${userWallets[userId].defaultWallet} has been set.`)
 
-
+            await this.saveUserWalletToFile(userWallets);
+            
+            await ctx.reply(msg);
+            this.walletSettings(ctx)
+        }
+    }
+   
     
-
     
-
-
+    async defaultWalletManual(ctx: any) {
+        try {
     
-    
+            await ctx.reply('Select an option:', Markup.inlineKeyboard([
+                [
+                    Markup.button.callback('🔧 Disable Manual Wallets', 'disable_manual_wallets'),                    
+                ],                
+                [                    
+                    Markup.button.callback('🔧 Use 1 Wallet', 'use_one_wallet_manual'),                    
+                ],                
+                [                    
+                    Markup.button.callback('🔧 Use 2 Wallets', 'use_two_wallets_manual'),
+                ],                
+                [
+                    Markup.button.callback('⬅️ Back', 'Back'),
+                    Markup.button.callback('❌ Close', 'Close')
+                ]                                
+            ]));
+
+        } catch (error) {
+            console.error('Error in defaultWalletAuto:', error);
+            await ctx.reply('An error occurred while processing your request. Please try again later.');
+        }
+    }
+                    
 }
 
 

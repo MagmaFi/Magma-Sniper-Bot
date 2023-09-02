@@ -1,13 +1,20 @@
 {
   "1821400871": {
     "wallets": [
-      "0xe0a12918C6A8B4c038f4936646CE5A4d27819B15"
+      "0xD09ACdE3a85F59bc6f8c9d590D782DFdEF79257A",
+      "0x1a609e627fF50B4De9709Ce56CEE45f8D057A2bA"
     ],
-    "default_wallet": 1
+    "transferWallets": [
+      "0x2F4b70DfEAF2192f68d1eAdf246ea770A74D75dE"
+    ],
+    "defaultWallet": "0x1a609e627fF50B4De9709Ce56CEE45f8D057A2bA",
+    "default_auto_wallets": 2
   },
   "5494151097": {
     "wallets": [
-      "0xf1eda9aEBd926c7a441a946Eb190b08Dc1ecbf0A"
+      "0x4773426793eE9B65aCC958a3674a00924b4B023e",
+      "0x5491Cd671Eb6C9d360035754DBA1bc9316b76916",
+      "0x1E426e50a8a8fC7Fe12fdF1b52571a09b61e1BaA"
     ]
   }
 }
