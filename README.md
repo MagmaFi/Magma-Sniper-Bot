@@ -43,7 +43,7 @@ Check out our [comprehensive documentation](magmafi.xyz) to explore all the feat
 1. Clone this repository:
 
 ```bash
-git clone https://github.com/yourusername/telegram-trader-bot.git
+git clone https://github.com/MagmaFi/telegram-trader-bot.git
 cd telegram-trader-bot
 ```
 
