@@ -19,7 +19,7 @@ async function initBot() {
         bot = null;
     }
     bot = new Bot();
-    await bot.init(DEV);
+    await bot.initializeBot(DEV);
 }
 
 
